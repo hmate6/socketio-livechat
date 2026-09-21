@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RetroChat</title>
+  <link rel="icon" type="image/x-icon" href="static/img/pgbg.png">
+  <link rel="stylesheet" href="/static/base.css">
+  <link rel="stylesheet" href="/static/chat.css">
+
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+
+  <style>
+    body {
+      background-image: url("/static/img/patterns/{{ selection }}");
+      animation: slideBackground 100s linear infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <noscript><p><em>This page requires JavaScript.</em></p></noscript>
+
+  <div id="chat-container" class="content" style="margin-top: 50px">
+    <h1 class="title">RetroChat</h1>
+
+    <div class="inner">
+      <!-- Message list (history is rendered by the server) -->
+      <div class="chat-box" id="chat-box">
+        <ul class="chat-messages" id="chat-messages">
+          {% for x in chat_history %}
+          {# Line format: <2-letter country code><user>: <message>;<timestamp> #}
+          {% set sep = x.rfind(";") %}
+          {% set timestamp = x[sep + 1:sep + 20] %}
+          <li class="chat-message-incoming">
+            <img src="/static/img/32x32/{{ x[:2] }}.png" title="{{ x[:2] }}" alt="{{ x[:2] }}">
+            <div>{{ x[2:sep] }}</div>
+            {% if not timestamp.startswith(CURRENT_YEAR) %}
+              {{ timestamp }}
+            {% else %}
+              {{ x[sep + 6:sep + 20] }}
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Message input -->
+      <form id="chat-form">
+        <div class="input-group">
+          <input name="message" style="width: 40%" class="input-user" id="text" placeholder="Enter your message" required autocomplete="off">
+          <button type="submit" class="command_button" id="sendButton">Send</button>
+          <button type="button" class="command_button" id="muteButton">Mute</button>
+        </div>
+      </form>
+    </div>
+
+    <audio id="audio" src="./static/soundeffect/click.mp3"></audio>
+  </div>
+
+  <script>
+    var CURRENT_USER = '{{ name }}';
+    var HOST_URL = "{{ HOST_IP }}";
+
+    var chatBox = document.getElementById('chat-box');
+    var chatMessages = document.getElementById('chat-messages');
+    var audio = document.getElementById('audio');
+    var socket;
+
+    // ---- Helpers ----------------------------------------------------------
+
+    function scrollToBottom() {
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Keep following the chat only if the user is already near the bottom
+    function scrollIfNearBottom() {
+      var distanceFromBottom = (chatBox.scrollHeight - chatBox.scrollTop) - chatBox.clientHeight;
+      if (distanceFromBottom < 200) {
+        scrollToBottom();
+      }
+    }
+
+    function sendMessage(text) {
+      $('#text').val('');
+      socket.emit('text', { msg: text });
+    }
+
+    // Builds one <li> from a "<country code><user>: <message>" string
+    function createMessageElement(rawMessage) {
+      var countryCode = rawMessage.slice(0, 2);
+      var content = rawMessage.slice(2);
+
+      var item = document.createElement('li');
+      item.classList.add(content.startsWith(CURRENT_USER + ':') ? 'chat-message-outgoing' : 'chat-message-incoming');
+
+      var flag = document.createElement('img');
+      flag.src = '../static/img/32x32/' + countryCode + '.png';
+      flag.alt = countryCode;
+      flag.title = countryCode;
+
+      var text = document.createElement('div');
+      text.textContent = content;
+
+      item.appendChild(flag);
+      item.appendChild(text);
+      return item;
+    }
+
+    // ---- Page setup -------------------------------------------------------
+
+    window.onload = scrollToBottom;
+
+    $(function () {
+      // The chat window can be moved by its title bar
+      $('#chat-container').draggable({ handle: 'h1.title' });
+
+      // ---- Socket events ----
+      socket = io.connect(HOST_URL + '/chat', { transports: ['websocket', 'polling'] });
+
+      socket.on('connect', function () {
+        socket.emit('joined', {});
+      });
+
+      socket.on('message', function (data) {
+        chatMessages.appendChild(createMessageElement(data.msg));
+        scrollIfNearBottom();
+      });
+
+      // ---- Sending messages ----
+      // Send button: play the click sound and send the message
+      $('#sendButton').on('click', function (event) {
+        event.preventDefault();
+        audio.play();
+
+        if ($('#text').val().trim() !== '') {
+          sendMessage($('#text').val());
+        }
+      });
+
+      // Enter key sends the message too
+      $('#text').on('keypress', function (event) {
+        var key = event.keyCode || event.which;
+        var text = $('#text').val();
+
+        if (key === 13 && text !== '') {
+          sendMessage(text);
+        }
+      });
+
+      // ---- Mute button ----
+      var muteButton = document.getElementById('muteButton');
+      muteButton.addEventListener('click', function () {
+        audio.muted = !audio.muted;
+        muteButton.textContent = audio.muted ? 'Unmute' : 'Mute';
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RetroChat</title>
+  <link rel="icon" type="image/x-icon" href="static/img/pgbg.png">
+  <link rel="stylesheet" href="./static/base.css">
+
+  <style>
+    body {
+      background-image: url("./static/img/patterns/{{ selection }}");
+      animation: slideBackground 100s linear infinite;
+    }
+  </style>
+</head>
+
+<body>
+  <noscript><p><em>This page requires JavaScript.</em></p></noscript>
+
+  <!-- Join window -->
+  <div id="content" class="content">
+    <h1 class="title">RetroChat</h1>
+    <div class="inner">
+      <div class="icon"><img src="./static/img/pgbg.png" width="50px"></div>
+
+      <form method="post" action="/joining">
+        <input name="name" class="input-user" style="display: inline-block;" placeholder="Enter your username" required>
+        <button type="submit" class="command_button" id="playButton" style="margin-right: 10px; margin-left: 40px; width: 70px">Join</button>
+      </form>
+    </div>
+
+    <audio id="audio" src="./static/soundeffect/click.mp3"></audio>
+  </div>
+
+  <!-- Info window (hidden) -->
+  <div id="content2" class="content" style="margin-top: 2%; display: none;">
+    <h1 class="title">Info</h1>
+    <div class="inner">
+      <div class="icon"><img src="./static/img/exclam2.gif" width="60px"></div>
+      <form method="post" action="/joining"></form>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  <script>
+    // Windows can be moved by their title bar
+    $(function () {
+      $("#content").draggable({ handle: "h1.title" });
+      $("#content2").draggable({ handle: "h1.title" });
+    });
+
+    // Click sound on the Join button
+    document.getElementById("playButton").addEventListener("click", function () {
+      document.getElementById("audio").play();
+    });
+  </script>
+</body>
+</html>
